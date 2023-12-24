@@ -177,12 +177,108 @@ func checkCode(res *http.Response) {
 }
 
 func cleanString(s string) string {
-	
+
 }
 
 ```
 
 ## 4번째 영상
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+var baseURL string = "https://www.saramin.co.kr/zf_user/search/recruit?&searchword=python"
+
+type extractedJob struct {
+	title    string
+	location string
+	corp     string
+}
+
+func main() {
+	var jobs []extractedJob //jobs는 구조체의 배열이다
+	totalPages := getPages() 
+
+	for i := 1; i < totalPages; i++ {
+		extractedJobs := getPage(i) //exxtractedJobs라는 변수에 페이지에서 가져온 변수들을 대입한다.
+		jobs = append(jobs, extractedJobs...) //jobs에 extractedJobs의 컨텐트만 더한다
+	}
+	fmt.Println(jobs)
+}
+
+func getPage(page int) []extractedJob {
+	var jobs []extractedJob //jobs는 구조체의 배열이다
+	pageURL := baseURL + "&recruitPage=" + strconv.Itoa(page)
+	fmt.Println("Requesting", pageURL)
+	res, err := http.Get(pageURL)
+	checkErr(err)
+	checkCode(res)
+
+	defer res.Body.Close()
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkErr(err)
+
+	searchCards := doc.Find(".item_recruit")
+
+	searchCards.Each(func(i int, card *goquery.Selection) {
+		job := extractJob(card) //카드에 들어있는 구조체를 job이라는 변수에 넣는다.
+		jobs = append(jobs, job) //jobs에 job을 더한다
+	})
+	return jobs
+}
+
+func extractJob(card *goquery.Selection) extractedJob {
+	title := cleanString(card.Find(".area_job>.job_tit>a").Text())
+	location := cleanString(card.Find(".area_job>.job_condition>span>a").Text())
+	corp := cleanString(card.Find(".area_corp>.corp_name>a").Text())
+	return extractedJob{
+		title:    title,
+		location: location,
+		corp:     corp,
+	} // 전에 만들었던 extractedJob 구조체안에 변수를 벨류로 넣는다
+}
+func getPages() int {
+	pages := 0
+	res, err := http.Get(baseURL)
+	checkErr(err)
+	checkCode(res)
+
+	defer res.Body.Close()
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkErr(err)
+
+	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
+		pages = s.Find("a").Length()
+	})
+	return pages
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func checkCode(res *http.Response) {
+	if res.StatusCode != 200 {
+		log.Fatalln("Request failed with Status: ", res.StatusCode)
+	}
+}
+
+func cleanString(s string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
+} // strings패키지를 이용해서 입력된 문자열의 스페이스를 없애고, 스페이스를 없앤 문자열을 하나로 합친다음, 다시 붙인다 뭔소리지
+
+```
+## 5번째 영상
 ```go
 
 ```
